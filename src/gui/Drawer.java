@@ -58,6 +58,7 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 	
 	private ArrayList<Embranchement> array;
 	private Embranchement selection = null;
+	private Embranchement selectionVue = null; // la vue est centree sur cette selection et ses branches
 	private boolean move = false;
 	private AidePlacement aidePlacementX;
 	private AidePlacement aidePlacementY;
@@ -67,6 +68,9 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 	private Document doc;
 	private BufferedImage ecran;
 	private Graphics2D g2d;
+	
+	private int paintIteration = 0;
+	private int paintNbIteration = 100;
 	
 	//fait la projection d'une coordonee de l'ecran sur l'image
 	public int convertXToRelative(int x) {
@@ -100,15 +104,25 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		
 		g2d.clearRect(0, 0, ecranLargeur, ecranHauteur);
 
-		// TODO: desiner les embranchements seulement fils de la selection et que sur 3-4 iterations
-		for (Embranchement obj : array) {
-			obj.draw(g2d);
-		}
+		paintIteration = 0;
+		paintComponentUnder(selectionVue, g2d);
+		
 		g2d.setColor(Color.red);
 		((Graphics2D)g).drawImage(ecran, ecranCurseurX, ecranCurseurY, ecranLargeurZoom,ecranHauteurZoom, null);
 		
 		aidePlacementX.draw(g);
 		aidePlacementY.draw(g);
+	}
+	public void paintComponentUnder(Embranchement parent, Graphics2D g) {
+		paintIteration++;
+		if(parent !=null)
+			parent.draw(g);
+		for (Embranchement obj : array) {
+			if (paintIteration >= paintNbIteration)
+				break;
+			else if(obj.origine == parent)
+				paintComponentUnder(obj, g);
+		}
 	}
 	/**
 	 * Affiche un pop-up pour demander a saisir un element 
@@ -449,6 +463,10 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 			        System.out.println("Cancelled");
 			    }
 			break;
+		case 'v':
+			selectionVue = selection;
+			repaint();
+			break;
 		default:
 			System.out.println("La touche "+arg0.getKeyChar()+" (KeyCode:"+arg0.getKeyCode()+") ne fait rien en mode selection");
 		}
@@ -480,6 +498,9 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 			System.out.println("curseur x:"+ecranCurseurX);
 			System.out.println("curseur y:"+ecranCurseurY);
 			break;
+		case 'v':
+			selectionVue = null;
+			repaint();
 		default:
 			System.out.println("La touche "+arg0.getKeyChar()+" (KeyCode:"+arg0.getKeyCode()+") ne fait rien en mode lecture");
 		}
