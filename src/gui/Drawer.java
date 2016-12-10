@@ -19,8 +19,6 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
 
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -28,27 +26,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Result;
-import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.TransformerFactoryConfigurationError;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
-import org.w3c.dom.Attr;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-
+import core.ComponentArray;
 import core.Embranchement;
+import core.EmbranchementX;
 
 public class Drawer extends JLabel implements MouseMotionListener, MouseListener, ComponentListener, KeyListener{
 	private static final long serialVersionUID = -8085388376890918612L;
@@ -56,21 +37,20 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 	private static int ecranCurseurX=0, ecranCurseurY=0;
 	private static int ecranHauteurZoom=ecranHauteur, ecranLargeurZoom=ecranLargeur;
 	
-	private ArrayList<Embranchement> array;
-	private Embranchement selection = null;
-	private Embranchement selectionVue = null; // la vue est centree sur cette selection et ses branches
+
+	private EmbranchementX selection = null;
+	private EmbranchementX selectionVue = null; // la vue est centree sur cette selection et ses branches
+	enum SelectionType {ALL, OVER, UNDER};
+	private SelectionType selectionType = SelectionType.UNDER;
 	private boolean move = false;
 	private AidePlacement aidePlacementX;
 	private AidePlacement aidePlacementY;
-	
-	private DocumentBuilderFactory dbFactory;
-	private DocumentBuilder db;
-	private Document doc;
+	private ComponentArray mArray;
+
 	private BufferedImage ecran;
 	private Graphics2D g2d;
 	
-	private int paintIteration = 0;
-	private int paintNbIteration = 100;
+	
 	
 	//fait la projection d'une coordonee de l'ecran sur l'image
 	public int convertXToRelative(int x) {
@@ -94,8 +74,8 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		ecran = new BufferedImage(ecranLargeur, ecranHauteur, BufferedImage.TYPE_INT_ARGB);
 		g2d = ecran.createGraphics();
 		g2d.setBackground(Color.white);
+		mArray = new ComponentArray();
 		
-		array = new ArrayList<Embranchement>();
 		aidePlacementX = new AidePlacement(this.getWidth(), this.getHeight());
 		aidePlacementY = new AidePlacement(this.getWidth(), this.getHeight());
 	}
@@ -104,8 +84,22 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		
 		g2d.clearRect(0, 0, ecranLargeur, ecranHauteur);
 
-		paintIteration = 0;
-		paintComponentUnder(selectionVue, g2d);
+		mArray.resetIteration();
+		switch(selectionType)
+		{
+		case UNDER:
+			mArray.paintComponentUnder(selectionVue, g2d);
+			break;
+		case OVER:
+			mArray.paintComponentOver(selectionVue, g2d);
+			break;
+		default:
+			mArray.paintComponentAll(g2d);
+		}
+		
+		//quoi qu'il arrive ou s'assure de voir la selection
+		if(selection!=null)
+			selection.draw(g2d);
 		
 		g2d.setColor(Color.red);
 		((Graphics2D)g).drawImage(ecran, ecranCurseurX, ecranCurseurY, ecranLargeurZoom,ecranHauteurZoom, null);
@@ -113,157 +107,21 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		aidePlacementX.draw(g);
 		aidePlacementY.draw(g);
 	}
-	public void paintComponentUnder(Embranchement parent, Graphics2D g) {
-		paintIteration++;
-		if(parent !=null)
-			parent.draw(g);
-		for (Embranchement obj : array) {
-			if (paintIteration >= paintNbIteration)
-				break;
-			else if(obj.origine == parent)
-				paintComponentUnder(obj, g);
-		}
-	}
+	
 	/**
 	 * Affiche un pop-up pour demander a saisir un element 
 	 * @param parent noeud parent de l'element a ajouter, null si racine
 	 */
-	public void addComponentForm(Embranchement parent) {
-	    JTextField type = new JTextField("");
-	    JTextField nom = new JTextField("");
-	    JTextField description = new JTextField("");
-	    String imagePath ="noimg.png"; // image lorsque aucune n'est preciser
-	    File fichier;
+	public void addComponentForm(EmbranchementX parent) {
+		selection = mArray.addComponentForm(parent);
+		if(selection != null)
+			move = true;
+		repaint();
 	    
-	    JPanel panel = new JPanel(new GridLayout(0, 2));
-	    Embranchement sortie;
-	    if(parent != null) { // relie a la racine
-	    	panel.add(new JLabel("Branche de:"));
-	    	panel.add(new JLabel(parent.getEmbranchement()));
-	    	panel.add(new JLabel("Sous famille des:"));
-	    	panel.add(new JLabel(parent.getType()));
-	    }
-	    
-	    panel.add(new JLabel("Type:"));
-	    panel.add(type);
-	    panel.add(new JLabel("Nom:"));
-	    panel.add(nom);
-	    panel.add(new JLabel("Description:"));
-	    panel.add(description);
-	    
-	   int result = JOptionPane.showConfirmDialog(null, panel, "Ajout bloc",
-	        JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-	    if (result == JOptionPane.OK_OPTION) {
-	    	JFileChooser chooser = new JFileChooser();
-	    	chooser.setCurrentDirectory(new File("./"));
-	    	int returnVal = chooser.showOpenDialog(null);
-	    	if(returnVal == JFileChooser.FILES_ONLY) {
-	    		fichier = chooser.getSelectedFile();
-	    		imagePath = fichier.getPath();
-	    	}
-	        System.out.println("Ajout" + type.getText()
-	            + " " + nom.getText()
-	            + " " + description.getText());
-	        sortie = new Embranchement(parent, type.getText(), nom.getText(), description.getText(),imagePath);
-	        array.add(sortie);
-	        selection = sortie;
-	        selection.setSelected(true);
-	        move = true;
-	        repaint();
-	    } else {
-	        System.out.println("Cancelled");
-	    }
 	}
 	public void loadFromFile(String filePath) {
-		File inputFile = new File(filePath);
-		try {
-			Document doc = DocumentBuilderFactory.newInstance()
-					.newDocumentBuilder().parse(inputFile);
-			Node root = doc.getFirstChild();
-			
-			parseEmbranchement(root.getChildNodes(), null);
-			
-		} catch (SAXException | IOException | ParserConfigurationException e) {
-			e.printStackTrace();
-		}
+		mArray.loadFromFile(filePath);
 		repaint();
-	}
-	private void parseEmbranchement(NodeList embranchementList, Embranchement origine) {
-		for(int z = 0; z < embranchementList.getLength(); z++) {
-			Node embranchement = embranchementList.item(z);
-			if(embranchement.getNodeType() == Node.ELEMENT_NODE) {
-				Element eEmbranchement = (Element) embranchement;
-				System.out.println("\n\tEmbranchement nodeName: "+eEmbranchement.getNodeName());
-				System.out.println("\tEmbranchement txtContent: "+eEmbranchement.getTextContent());
-				System.out.println("\tEmbranchement Description: "+eEmbranchement.getAttribute("description"));
-				System.out.println("\tEmbranchement nom: "+eEmbranchement.getAttribute("nom"));
-				System.out.println("\tEmbranchement x: "+eEmbranchement.getAttribute("x"));
-				System.out.println("\tEmbranchement y: "+eEmbranchement.getAttribute("y"));
-				System.out.println("\tEmbranchement image: "+eEmbranchement.getAttribute("image"));
-				Embranchement oEmbranchement = new Embranchement(origine, eEmbranchement.getAttribute("nom"), eEmbranchement.getNodeName(), eEmbranchement.getAttribute("description"), eEmbranchement.getAttribute("image"));
-				oEmbranchement.setPosition(Integer.parseInt(eEmbranchement.getAttribute("x")), Integer.parseInt(eEmbranchement.getAttribute("y")));
-				array.add(oEmbranchement);
-				parseEmbranchement(embranchement.getChildNodes(), oEmbranchement);
-			}
-		}
-	}
-	public void saveAs(String filePath) {
-		dbFactory = DocumentBuilderFactory.newInstance();
-		try {
-			// creation de l'XML
-			db = dbFactory.newDocumentBuilder();
-			doc = db.newDocument();
-
-			Element root = doc.createElement("root");
-			doc.appendChild(root);
-			
-			saveAs_child(null, root);
-			
-			// sauvegarde dans le fichier
-			Transformer transformer = TransformerFactory.newInstance()
-					.newTransformer();
-			Result output = new StreamResult(new File(filePath));
-			Source input = new DOMSource(doc);
-			transformer.transform(input, output);
-			
-			// affichage (debug)
-			StreamResult term = new StreamResult(System.out);
-			transformer.transform(input, term);
-			
-		} catch (ParserConfigurationException e) {
-			e.printStackTrace();
-		} catch (TransformerConfigurationException e) {
-			e.printStackTrace();
-		} catch (TransformerFactoryConfigurationError e) {
-			e.printStackTrace();
-		} catch (TransformerException e) {
-			e.printStackTrace();
-		}
-	}
-	private void saveAs_child(Embranchement parent, Element parentNode) {
-		for(Embranchement obj : array) {
-			if(obj.origine == parent) { // on a trouve un enfant
-				Element enfant = doc.createElement(obj.getEmbranchement());
-				parentNode.appendChild(enfant);
-				Attr enfantAttr = doc.createAttribute("description");
-				enfantAttr.setValue(obj.getDescriptif());
-				enfant.setAttributeNode(enfantAttr);
-				enfantAttr = doc.createAttribute("x");
-				enfantAttr.setValue(Integer.toString(obj.getX()));
-				enfant.setAttributeNode(enfantAttr);
-				enfantAttr = doc.createAttribute("y");
-				enfantAttr.setValue(Integer.toString(obj.getY()));
-				enfant.setAttributeNode(enfantAttr);
-				enfantAttr = doc.createAttribute("nom");
-				enfantAttr.setValue(obj.getType());
-				enfant.setAttributeNode(enfantAttr);
-				enfantAttr = doc.createAttribute("image");
-				enfantAttr.setValue(obj.getImagePath());
-				enfant.setAttributeNode(enfantAttr);
-				
-				saveAs_child(obj, enfant);
-			}
-		}
 	}
 	@Override
 	public void mouseDragged(MouseEvent arg0) {
@@ -282,7 +140,7 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 			aideUtileY = false;
 			bX = mouseX;
 			bY = mouseY;
-			for (Embranchement obj : array) { // aide au placement
+			for (Embranchement obj : mArray.getArray()) { // aide au placement
 				if(obj != selection)
 				{
 					if(Math.abs(obj.getX()-mouseX)<30) { // proche de l'axe x d'un autre bloc
@@ -314,7 +172,7 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		
 		boolean foundMatch;
 		
-		if (selection != null && !moveBloc(x,y)) { // on deselectionne
+		if (selection != null && !moveBloc(selection, x, y)) { // on deselectionne si on clic pas sur le bloc déjà selectionné (ou en mouvement)
 			selection.setSelected(false);
 			selection = null;
 			move = false;
@@ -324,11 +182,22 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		} else {
 			switch(arg0.getButton()) {
 			case 1: // clic gauche
-				selectBloc(x, y);
+				switch(selectionType)
+				{
+				case UNDER:
+					selection = mArray.selectComponentUnder(selectionVue, x, y);
+					break;
+				case OVER:
+					selection = mArray.selectComponentOver(selectionVue, x, y);
+					break;
+				default:
+					selection = mArray.selectComponentAll(x, y);
+				}
+				repaint();
 				break;
 			case 3: // clic droit
 				foundMatch = false;
-				for(Embranchement obj : array) {
+				for(EmbranchementX obj : mArray.getArray()) {
 					if(obj.mouseCollision(x, y)) {
 						foundMatch = true;// on a clique sur une branche (ou racine)
 						addComponentForm(obj);
@@ -344,20 +213,7 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		}
 			
 	}
-	private void selectBloc(int x, int y){
-		selection = null;
-		for(Embranchement obj : array) {
-			if(obj.mouseCollision(x, y)) {
-				selection = obj;
-				break;
-			}
-		}
-		if(selection == null) // impossible de trouver une collision
-			return;
-		selection.setSelected(true);
-		repaint();
-	}
-	private boolean moveBloc(int x, int y) {
+	private boolean moveBloc(EmbranchementX selection, int x, int y) {
 		if(selection.mouseCollision(x, y) && !move) { // si on clic de nouveau sur le bloc et que on ne le bouge pas deja
 			selection.setPosition(x, y); // on met le bloc derriere le curseur (on le deplace)
 			move = true;
@@ -424,13 +280,10 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 	public void keyReleased(KeyEvent arg0) {
 		
 	}
+	
 	// supprime element et ses enfants
-	private void remove(Embranchement element) {
-		for(Embranchement obj : array) {
-			if(obj.origine == element)
-				remove(obj);
-		}
-		array.remove(element);
+	private void remove(EmbranchementX element) {
+		mArray.remove(element);
 	}
 	@Override
 	public void keyTyped(KeyEvent arg0) {
@@ -465,7 +318,28 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 			break;
 		case 'v':
 			selectionVue = selection;
+			selectionType = SelectionType.UNDER;
 			repaint();
+			break;
+		case 'V':
+			selectionVue = selection;
+			selectionType = SelectionType.OVER;
+			repaint();
+			break;
+		case 'o':
+			selectionVue = selection;
+			selectionType = SelectionType.OVER;
+			repaint();
+			break;
+		case 'u':
+			selectionVue = selection;
+			selectionType = SelectionType.UNDER;
+			repaint();
+			break;
+		case 'i':
+			if(selection!=null) {
+				System.out.println(selection.toString());
+			}
 			break;
 		default:
 			System.out.println("La touche "+arg0.getKeyChar()+" (KeyCode:"+arg0.getKeyCode()+") ne fait rien en mode selection");
@@ -500,9 +374,15 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 			break;
 		case 'v':
 			selectionVue = null;
+			if(selectionType == SelectionType.OVER) // car il n'y a rien au dessus de null
+				selectionType = SelectionType.ALL;
 			repaint();
+			break;
 		default:
 			System.out.println("La touche "+arg0.getKeyChar()+" (KeyCode:"+arg0.getKeyCode()+") ne fait rien en mode lecture");
 		}
+	}
+	public void saveAs(String filePath) {
+		mArray.saveAs(filePath);
 	}
 }
