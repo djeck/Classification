@@ -1,3 +1,6 @@
+/**
+ * @file componentarray.java
+ */
 package core;
 
 import java.awt.Graphics2D;
@@ -31,26 +34,38 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+/**
+ * @class ComponentArray
+ * @brief A set of tools to manage the main "Embranchement" array
+ * @author djeck
+ */
 public class ComponentArray {
-	private ArrayList<EmbranchementX> mArray;
-	private DocumentBuilderFactory dbFactory;
-	private DocumentBuilder db;
-	private Document doc;
-	private int paintIteration = 0; // pour limiter le nombre d'iteration lorsque on parcour le tableau TODO
-	private int paintNbIteration = 100;
+	private ArrayList<EmbranchementX> mArray;/*!< all part of the graph = main "Embranchement" array*/
+	
+	//XML tools
+	private DocumentBuilderFactory mDocumentFactory;
+	private DocumentBuilder mDocumentBuilder;
+	private Document mDocument;
+	
+	private int paintIteration = 0; /*!< count number of iteration when cover the main array TODO*/
+	private static final int MAX_PAINT_ITERATION = 100;
 	
 	public ComponentArray() {
 		mArray = new ArrayList<EmbranchementX>();
 	}
+	
+	//TODO
 	public void resetIteration() {
 		paintIteration=0;
 	}
+	
 	/**
-	 * Parcour la liste des blocs du bloc parent à tout ces enfants
-	 * @param parent origine, plus haut bloc visible
-	 * @param func, fonction à appliquer sur tout les blocs, si elle retourne quelque chose ça remontera jusqu'a la valeure de retour de coverComponentUnder
+	 * @brief generic method to cover the main array from parent bloc to all his children (all if 'parent' == null)
+	 * @param parent starting point
+	 * @param func, function to apply on all components, stop recursing if return != null
+	 * @return component returned by 'func' or null
 	 */
-	public EmbranchementX coverComponentUnder(EmbranchementX parent, IterableFunction func) {
+	private EmbranchementX coverComponentUnder(EmbranchementX parent, IterableFunction func) {
 		EmbranchementX buff;
 		if(parent !=null)
 		{
@@ -68,11 +83,14 @@ public class ComponentArray {
 		}
 		return null;
 	}
+	
 	/**
-	 * Parcour la liste des bloc en executant IterableFunction que sur les bloc parent direct de fils
-	 * @param func, fonction à appliquer sur tout les blocs, si elle retourne quelque chose cela remontera jusqu'à la valeure de retour de coverComponentUnder
+	 * @brief generic method to cover the main array from 'fils' to all his direct parents
+	 * @param fils, child: starting point of recursing
+	 * @param func, function to apply on all components, stop covering if return != null
+	 * @return component returned by 'func' or null if none
 	 */
-	public EmbranchementX coverComponentOver(EmbranchementX fils, IterableFunction func) {
+	private EmbranchementX coverComponentOver(EmbranchementX fils, IterableFunction func) {
 		EmbranchementX result;
 		EmbranchementX buff = fils;
 		if(buff!=null) {
@@ -89,7 +107,12 @@ public class ComponentArray {
 		}
 		return null;
 	}
-	public EmbranchementX coverComponentAll(IterableFunction func) {
+	/**
+	 * @brief generic method to cover all the main array
+	 * @param func, function to apply on all components, stop covering if return != null
+	 * @return component returned by 'func' or null
+	 */
+	private EmbranchementX coverComponentAll(IterableFunction func) {
 		EmbranchementX result;
 		for(EmbranchementX obj: mArray) {
 			result = func.execute(obj);
@@ -98,10 +121,11 @@ public class ComponentArray {
 		}
 		return null;
 	}
+	
 	/**
-	 * @brief dessine tour les bloc en dessous de parent (tous si parent == null)
-	 * @param parent
-	 * @param g
+	 * @brief draw all components under 'parent' (all if 'parent' == null)
+	 * For more information see 'coverComponentUnder' witch implement covering the array
+	 * @param g "pen to draw with"
 	 */
 	public void paintComponentUnder(EmbranchementX parent, Graphics2D g) {
 		coverComponentUnder(parent, new IterableFunction(g){
@@ -111,6 +135,14 @@ public class ComponentArray {
 			}
 		});
 	}
+	
+	/**
+	 * @brief cover and test collision with all components under 'parent' stopping when found a collision
+	 * For more information see 'coverComponentUnder' witch implement covering the array
+	 * @param mx, x position of the mouse or whatever point you want to test collision with
+	 * @param my, y position of the mouse...
+	 * @return the component with collision, null otherwise
+	 */
 	public EmbranchementX selectComponentUnder(EmbranchementX parent, int mx, int my) {
 		EmbranchementX buff = null;
 		buff = coverComponentUnder(parent, new IterableFunction(mx, my){
@@ -125,6 +157,11 @@ public class ComponentArray {
 		return buff;
 	}
 	
+	/**
+	 * @brief draw all components over 'fils' (warning: nothing if 'fils' == null)
+	 * For more information see 'coverComponentOver' witch implement covering the array
+	 * @param g "pen to draw with"
+	 */
 	public void paintComponentOver(EmbranchementX fils, Graphics2D g) {
 		coverComponentOver(fils, new IterableFunction(g){
 			public EmbranchementX execute(EmbranchementX obj) {
@@ -133,6 +170,14 @@ public class ComponentArray {
 			}
 		});
 	}
+	
+	/**
+	 * @brief cover and test collision with all components over 'fils' stopping when found a collision
+	 * For more information see 'coverComponentOver' witch implement covering the array
+	 * @param mx, x position of the mouse or whatever point you want to test collision with
+	 * @param my, y position of the mouse...
+	 * @return the component with collision, null otherwise
+	 */
 	public EmbranchementX selectComponentOver(EmbranchementX fils, int mx, int my) {
 		EmbranchementX buff = null;
 		buff = coverComponentOver(fils, new IterableFunction(mx, my){
@@ -147,6 +192,11 @@ public class ComponentArray {
 		return buff;
 	}
 	
+	/**
+	 * @brief draw all components of the main array
+	 * For more information see 'coverComponentAll' witch implement covering the array
+	 * @param g "pen to draw with"
+	 */
 	public void paintComponentAll(Graphics2D g) {
 		coverComponentAll(new IterableFunction(g){
 			public EmbranchementX execute(EmbranchementX obj) {
@@ -155,6 +205,14 @@ public class ComponentArray {
 			}
 		});
 	}
+	
+	/**
+	 * @brief cover and test collision with all components stopping when found a collision
+	 * For more information see 'coverComponentAll' witch implement covering the array
+	 * @param mx, x position of the mouse or whatever point you want to test collision with
+	 * @param my, y position of the mouse...
+	 * @return the component with collision, null otherwise
+	 */
 	public EmbranchementX selectComponentAll(int mx, int my) {
 		EmbranchementX buff = null;
 		buff = coverComponentAll(new IterableFunction(mx, my){
@@ -172,15 +230,20 @@ public class ComponentArray {
 	public void add(EmbranchementX obj) {
 		mArray.add(obj);
 	}
+	
+	/**
+	 * Save main array to file (using XML)
+	 * @param filePath where to save data
+	 */
 	public void saveAs(String filePath) {
-		dbFactory = DocumentBuilderFactory.newInstance();
+		mDocumentFactory = DocumentBuilderFactory.newInstance();
 		try {
 			// creation de l'XML
-			db = dbFactory.newDocumentBuilder();
-			doc = db.newDocument();
+			mDocumentBuilder = mDocumentFactory.newDocumentBuilder();
+			mDocument = mDocumentBuilder.newDocument();
 
-			Element root = doc.createElement("root");
-			doc.appendChild(root);
+			Element root = mDocument.createElement("root");
+			mDocument.appendChild(root);
 			
 			saveAs_child(null, root);
 			
@@ -188,7 +251,7 @@ public class ComponentArray {
 			Transformer transformer = TransformerFactory.newInstance()
 					.newTransformer();
 			Result output = new StreamResult(new File(filePath));
-			Source input = new DOMSource(doc);
+			Source input = new DOMSource(mDocument);
 			transformer.transform(input, output);
 			
 			// affichage (debug)
@@ -205,39 +268,55 @@ public class ComponentArray {
 			e.printStackTrace();
 		}
 	}
+	
+	/**
+	 * @brief recursing method called by saveAs to cover the main array
+	 * @param parent, parent element of elements we are saving
+	 * @param parentNode, parent element's XML node
+	 */
 	private void saveAs_child(EmbranchementX parent, Element parentNode) {
 		for(EmbranchementX obj : mArray) {
-			if(obj.origine == parent) { // on a trouve un enfant
+			if(obj.origine == parent) { // found a child
 				Element enfant;
 				try {
-					enfant = doc.createElement(escapeSpecialChar(obj.getEmbranchement()));
+					enfant = mDocument.createElement(escapeSpecialChar(obj.getEmbranchement()));
 					
 					parentNode.appendChild(enfant);
-					Attr enfantAttr = doc.createAttribute("description");
+					Attr enfantAttr = mDocument.createAttribute("description");
 					enfantAttr.setValue(obj.getDescriptif());
 					enfant.setAttributeNode(enfantAttr);
-					enfantAttr = doc.createAttribute("x");
+					enfantAttr = mDocument.createAttribute("x");
 					enfantAttr.setValue(Integer.toString(obj.getX()));
 					enfant.setAttributeNode(enfantAttr);
-					enfantAttr = doc.createAttribute("y");
+					enfantAttr = mDocument.createAttribute("y");
 					enfantAttr.setValue(Integer.toString(obj.getY()));
 					enfant.setAttributeNode(enfantAttr);
-					enfantAttr = doc.createAttribute("nom");
+					enfantAttr = mDocument.createAttribute("nom");
 					enfantAttr.setValue(obj.getType());
 					enfant.setAttributeNode(enfantAttr);
-					enfantAttr = doc.createAttribute("image");
+					enfantAttr = mDocument.createAttribute("image");
 					enfantAttr.setValue(obj.getImagePath());
 					enfant.setAttributeNode(enfantAttr);
-					saveAs_child(obj, enfant);
+					
+					saveAs_child(obj, enfant);// recurse
 				} catch (org.w3c.dom.DOMException e) {
 					e.printStackTrace();
 				}
 			}
-		}
+		} // no more child, stop this iteration
 	}
+	
+	/**
+	 * @brief Remove special characters is 'spe' to fit with XML element's name requirement
+	 * Optimized for french
+	 * @return normalized string
+	 */
 	private String escapeSpecialChar(String spe) {
 		String result = new String();
-		
+		// only lower case are keep, upper case are converted to lower
+		// space to '_'
+		// other special characters (french's ones at least) to equivalent
+		// otherwise they are removed
 		for(int i=0; i< spe.length(); i++) {
 			if(spe.charAt(i)>='a' && spe.charAt(i)<='z')
 				result+=spe.charAt(i);
@@ -256,45 +335,31 @@ public class ComponentArray {
 		}
 		return result;
 	}
-	private String undoEscapeSpecialChar(String spe) {
-		String result = new String();
-		
-		for(int i=0; i< spe.length(); i++) {
-			if(spe.charAt(i)>='a' && spe.charAt(i)<='z')
-				result+=spe.charAt(i);
-			else if(spe.charAt(i)=='/') {
-				if(i+1<spe.length())
-				{
-					i++;
-					if(spe.charAt(i)>='a' && spe.charAt(i)<='z') {
-						result+=spe.toUpperCase().charAt(i);
-					}
-					else if(spe.charAt(i) == '/') {
-						if(i+1<spe.length())
-						{
-							i++;
-							result+=(char)((int)spe.charAt(i)-(int)'a' + (int)'0');// 'a'->'0' 'b'->'1' 'c'->'3' ...
-						}
-					}
-				}
-				else
-					result+=spe.charAt(i);
-				
-			}
-		}
-		return result;
-	}
+	
+	/**
+	 * @brief give access to main array
+	 * Should not be used
+	 */
 	public ArrayList<EmbranchementX> getArray() {
 		return mArray;
 	}
+	
+	/**
+	 * remove 'obj' from main array an all his child
+	 * @param obj
+	 */
 	public void remove(EmbranchementX obj) {
-		for(EmbranchementX buff : mArray) {
+		for(EmbranchementX buff : mArray) { // TODO: remove child
 			if(buff.getParent() == obj)
-				remove(buff);
+				mArray.remove(buff);
 		}
 		mArray.remove(obj);
 	}
 	
+	/**
+	 * @brief Load main array from file 'filePath'
+	 * note: main array is not cleared
+	 */
 	public void loadFromFile(String filePath) {
 		File inputFile = new File(filePath);
 		try {
@@ -308,6 +373,12 @@ public class ComponentArray {
 			e.printStackTrace();
 		}
 	}
+	
+	/**
+	 * Called by 'loadFromFile' to cover the document
+	 * @param embranchementList part of the document being explored
+	 * @param origine parent to attach added child to
+	 */
 	private void parseEmbranchement(NodeList embranchementList, EmbranchementX origine) {
 		for(int z = 0; z < embranchementList.getLength(); z++) {
 			Node embranchement = embranchementList.item(z);
@@ -330,7 +401,7 @@ public class ComponentArray {
 	
 	/**
 	 * Affiche un pop-up pour demander a saisir un element 
-	 * @param parent noeud parent de l'element a ajouter, null si racine
+	 * @param parent, noeud parent de l'element a l'ajouter, null si racine
 	 */
 	public EmbranchementX addComponentForm(EmbranchementX parent) {
 	    JTextField type = new JTextField("");
