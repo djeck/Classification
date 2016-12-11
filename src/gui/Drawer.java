@@ -9,7 +9,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridLayout;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.KeyEvent;
@@ -18,13 +17,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
 
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.UIManager;
 
 import core.ComponentArray;
@@ -61,6 +56,8 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		int reY = (int)((y - 45 - ecranCurseurY)*ecranHauteur/(double)ecranHauteurZoom);
 		return reY;
 	}
+	
+	//fait la projection d'une coordonee de l'image sur l'ecran
 	public int convertXToAbsolute(int x) {
 		int absX = (int) (x*ecranLargeurZoom/(double)ecranLargeur)+3+ecranCurseurX;
 		return absX;
@@ -69,6 +66,7 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		int absY = (int) (y*ecranHauteurZoom/(double)ecranHauteur)+45+ecranCurseurY;
 		return absY;
 	}
+	
 	public Drawer() {
 		super();
 		ecran = new BufferedImage(ecranLargeur, ecranHauteur, BufferedImage.TYPE_INT_ARGB);
@@ -97,7 +95,7 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 			mArray.paintComponentAll(g2d);
 		}
 		
-		//quoi qu'il arrive ou s'assure de voir la selection
+		//quoi qu'il arrive on s'assure de voir la selection
 		if(selection!=null)
 			selection.draw(g2d);
 		
