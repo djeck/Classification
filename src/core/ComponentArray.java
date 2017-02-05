@@ -1,4 +1,5 @@
 /**
+ * test
  * @file componentarray.java
  */
 package core;
@@ -8,6 +9,7 @@ import java.awt.GridLayout;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -33,6 +35,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+
 
 /**
  * @class ComponentArray
@@ -349,9 +352,9 @@ public class ComponentArray {
 	 * @param obj
 	 */
 	public void remove(EmbranchementX obj) {
-		for(EmbranchementX buff : mArray) { // TODO: remove child
-			if(buff.getParent() == obj)
-				mArray.remove(buff);
+		for(int i = 0; i<mArray.size(); i++) {
+			if(mArray.get(i).getParent() == obj)
+				remove(mArray.get(i));
 		}
 		mArray.remove(obj);
 	}
