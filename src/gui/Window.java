@@ -23,8 +23,10 @@ public class Window extends JFrame implements ActionListener {
 	private JMenu file;
 	private JMenuItem save;
 	private JMenuItem exit;
+	private JMenuItem openFile;
+	private JMenuItem saveAs;
+	private JMenuItem reload;
 
-	private String filePath = "output.xml";
 
 	public Window() {
 		setTitle("Classification");
@@ -51,7 +53,7 @@ public class Window extends JFrame implements ActionListener {
 		this.addKeyListener(drawer);
 		getContentPane().add(container, BorderLayout.CENTER);
 		setVisible(true);
-		drawer.loadFromFile(filePath);
+		drawer.loadFromFile(null);
 		repaint();
 	}
 
@@ -68,15 +70,29 @@ public class Window extends JFrame implements ActionListener {
 		save.addActionListener(this);
 		file.add(save);
 
-		// TODO: save as
+		saveAs = new JMenuItem("Save As");
+		saveAs.setMnemonic(KeyEvent.VK_A);
+		saveAs.setToolTipText("Save file as ...");
+		saveAs.addActionListener(this);
+		file.add(saveAs);
 
+		reload = new JMenuItem("Reload");
+		reload.setMnemonic(KeyEvent.VK_O);
+		reload.setToolTipText("Reload components/Undo");
+		reload.addActionListener(this);
+		file.add(reload);
+		
+		openFile = new JMenuItem("Open File");
+		openFile.setMnemonic(KeyEvent.VK_O);
+		openFile.setToolTipText("Open Components' file");
+		openFile.addActionListener(this);
+		file.add(openFile);
+		
 		exit = new JMenuItem("Exit");
 		exit.setMnemonic(KeyEvent.VK_E);
 		exit.setToolTipText("Exit All");
 		exit.addActionListener(this);
 		file.add(exit);
-
-		// TODO: Open file
 
 		menubar.add(file);
 
@@ -86,7 +102,14 @@ public class Window extends JFrame implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
 		if (arg0.getSource() == save) {
-			drawer.saveAs(filePath);
+			drawer.saveAs(null);
+		} else if (arg0.getSource() == saveAs) {
+			drawer.saveAsForm();
+		} else if (arg0.getSource() == reload) {
+			drawer.loadFromFile(null); // null => last used filePath
+		} else if (arg0.getSource() == openFile) {
+			drawer.clearComponentArray();
+			drawer.openFileForm();
 		} else if (arg0.getSource() == exit) {
 			this.dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
 		}

@@ -9,7 +9,6 @@ import java.awt.GridLayout;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.ListIterator;
 
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -362,8 +361,9 @@ public class ComponentArray {
 	/**
 	 * @brief Load main array from file 'filePath'
 	 * note: main array is not cleared
+	 * @return false if error occurred, else true
 	 */
-	public void loadFromFile(String filePath) {
+	public boolean loadFromFile(String filePath) {
 		File inputFile = new File(filePath);
 		try {
 			Document doc = DocumentBuilderFactory.newInstance()
@@ -371,9 +371,11 @@ public class ComponentArray {
 			Node root = doc.getFirstChild();
 			
 			parseEmbranchement(root.getChildNodes(), null);
+			return true;
 			
 		} catch (SAXException | IOException | ParserConfigurationException e) {
 			e.printStackTrace();
+			return false;
 		}
 	}
 	
@@ -451,5 +453,9 @@ public class ComponentArray {
 	        return null;
 	    }
 	    
+	}
+	
+	public void clear() {
+		mArray.clear();
 	}
 }

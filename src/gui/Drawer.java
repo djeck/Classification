@@ -17,7 +17,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
+import java.io.File;
 
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.UIManager;
@@ -44,6 +46,8 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 
 	private BufferedImage ecran;
 	private Graphics2D g2d;
+	
+	private String mFilePath;
 	
 	
 	
@@ -73,6 +77,7 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 		g2d = ecran.createGraphics();
 		g2d.setBackground(Color.white);
 		mArray = new ComponentArray();
+		mFilePath = "output.xml";
 		
 		aidePlacementX = new AidePlacement(this.getWidth(), this.getHeight());
 		aidePlacementY = new AidePlacement(this.getWidth(), this.getHeight());
@@ -118,7 +123,13 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 	    
 	}
 	public void loadFromFile(String filePath) {
-		mArray.loadFromFile(filePath);
+		String buff = filePath;
+		if (buff == null) { // use default file path
+			buff = mFilePath;
+		}
+		if(mArray.loadFromFile(buff)) {
+			mFilePath = buff; // keep file path somewhere
+		}
 		repaint();
 	}
 	@Override
@@ -382,5 +393,33 @@ public class Drawer extends JLabel implements MouseMotionListener, MouseListener
 	}
 	public void saveAs(String filePath) {
 		mArray.saveAs(filePath);
+	}
+	public void openFileForm() {
+		String filePath="output.xml";
+		File file;
+		JFileChooser chooser = new JFileChooser();
+    	chooser.setCurrentDirectory(new File("./"));
+    	int returnVal = chooser.showOpenDialog(null);
+    	if(returnVal == JFileChooser.FILES_ONLY) {
+    		file = chooser.getSelectedFile();
+    		filePath = file.getPath();
+    		loadFromFile(filePath);
+    	}
+	}
+	public void saveAsForm() {
+		String filePath="output.xml";
+		File file;
+		JFileChooser chooser = new JFileChooser();
+    	chooser.setCurrentDirectory(new File("./"));
+    	int returnVal = chooser.showOpenDialog(null);
+    	if(returnVal == JFileChooser.FILES_ONLY) {
+    		file = chooser.getSelectedFile();
+    		filePath = file.getPath();
+    	}
+    	saveAs(filePath);
+	}
+	public void clearComponentArray() {
+		mArray.clear();
+		repaint();
 	}
 }
